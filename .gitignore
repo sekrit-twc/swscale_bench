@@ -1,0 +1,13 @@
+*.a
+*.dll
+*.exe
+*.lib
+*.o
+*.obj
+*.sdf
+*.suo
+x64
+Debug
+Release
+ffmpeg-2.8/*
+
