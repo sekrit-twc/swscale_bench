@@ -91,7 +91,7 @@ void execute(AVPixelFormat pixfmt_in, AVPixelFormat pixfmt_out, int width_in, in
 
 	for (unsigned n = thread_min; n <= thread_max; ++n) {
 		std::vector<std::thread> thread_pool;
-		std::atomic_int error;
+		std::atomic_int error{ 0 };
 		Timer timer;
 
 		timer.start();
