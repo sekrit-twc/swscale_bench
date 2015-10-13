@@ -34,7 +34,7 @@ int decode_pixfmt(const ArgparseOption *, void *out, int argc, char **argv)
 }
 
 void thread_target(AVPixelFormat pixfmt_in, AVPixelFormat pixfmt_out, int width_in, int width_out, int height_in, int height_out,
-                   unsigned times, std::atomic_int *error)
+                   std::atomic_int *counter, std::atomic_int *error)
 {
 	SwsContext *sws = nullptr;
 	AVFrame *src_frame = nullptr;
@@ -64,7 +64,10 @@ void thread_target(AVPixelFormat pixfmt_in, AVPixelFormat pixfmt_out, int width_
 	if ((err = av_frame_get_buffer(dst_frame, 64)))
 		goto fail;
 
-	for (unsigned n = 0; n < times; ++n) {
+	while (true) {
+		if ((*counter)-- <= 0)
+			break;
+
 		if (sws_scale(sws, src_frame->data, src_frame->linesize, 0, height_in, dst_frame->data, dst_frame->linesize) < 0)
 			goto fail;
 	}
@@ -91,12 +94,14 @@ void execute(AVPixelFormat pixfmt_in, AVPixelFormat pixfmt_out, int width_in, in
 
 	for (unsigned n = thread_min; n <= thread_max; ++n) {
 		std::vector<std::thread> thread_pool;
+		std::atomic_int counter{ static_cast<int>(times * n) };
 		std::atomic_int error{ 0 };
 		Timer timer;
 
 		timer.start();
 		for (unsigned nn = 0; nn < n; ++nn) {
-			thread_pool.emplace_back(thread_target, pixfmt_in, pixfmt_out, width_in, width_out, height_in, height_out, times, &error);
+			thread_pool.emplace_back(thread_target, pixfmt_in, pixfmt_out, width_in, width_out, height_in, height_out,
+			                         &counter, &error);
 		}
 
 		for (auto &th : thread_pool) {
